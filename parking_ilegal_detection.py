@@ -49,10 +49,6 @@ class IllegalParkingDetector:
         
         # Kamus untuk menyimpan posisi terakhir kendaraan yang dilacak
         self.tracked_vehicles = {}
-        
-        # Counter untuk total pelanggaran
-        self.total_violations = 0
-        self.counted_violations = set()
 
     def add_zone(self, points_normalized):
         """
@@ -105,7 +101,7 @@ class IllegalParkingDetector:
             
             # Label zona
             centroid = np.mean(zone_pixels, axis=0).astype(int)
-            cv2.putText(frame, f"ZONA ILEGAL {i+1}", (centroid[0] - 50, centroid[1]), 
+            cv2.putText(frame, f"ZONA PARKIR ILEGAL {i+1}", (centroid[0] - 50, centroid[1]), 
                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
         
         cv2.addWeighted(overlay, 0.3, frame, 0.7, 0, frame)
@@ -117,10 +113,6 @@ class IllegalParkingDetector:
         if not cap.isOpened():
             print(f"Error: Tidak bisa membuka video di {video_path}")
             return
-        
-        # Buat window yang bisa di-resize
-        if show_preview:
-            cv2.namedWindow("Deteksi Parkir Ilegal", cv2.WINDOW_NORMAL)
 
         # Properti video
         width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -144,6 +136,8 @@ class IllegalParkingDetector:
             # Deteksi kendaraan
             results = self.model(frame, classes=self.vehicle_class_indices, conf=0.05)
             
+            current_frame_detections = []
+            
             # Normalisasi resolusi frame untuk konsistensi
             frame_height, frame_width, _ = frame.shape
             
@@ -152,7 +146,9 @@ class IllegalParkingDetector:
 
             for det in results[0].boxes:
                 x1, y1, x2, y2 = det.xyxy[0].cpu().numpy()
-                class_name = self.model.names[int(det.cls[0].cpu().numpy())]
+                conf = det.conf[0].cpu().numpy()
+                cls = int(det.cls[0].cpu().numpy())
+                class_name = self.model.names[cls]
 
                 # Dapatkan titik tengah bawah (posisi roda) dan normalisasi
                 center_pixel = self.get_box_bottom_center([x1, y1, x2, y2])
@@ -193,11 +189,6 @@ class IllegalParkingDetector:
                     is_violation = duration >= violation_threshold
                     color = (0, 0, 255) if is_violation else (0, 165, 255) # Merah jika pelanggaran, Oranye jika peringatan
                     
-                    # Tambah ke counter pelanggaran jika baru pertama kali melanggar
-                    if is_violation and vehicle_id not in self.counted_violations:
-                        self.total_violations += 1
-                        self.counted_violations.add(vehicle_id)
-
                     # Gambar BBox dan label
                     cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), color, 2)
                     label = f"{class_name} | ID: {vehicle_id} | {self.format_duration(duration)}"
@@ -218,18 +209,13 @@ class IllegalParkingDetector:
             for vid in stale_ids:
                 if vid in self.tracked_vehicles: del self.tracked_vehicles[vid]
                 if vid in self.vehicles_in_zone: del self.vehicles_in_zone[vid]
-                if vid in self.counted_violations: self.counted_violations.remove(vid)
-
 
             # Gambar zona pada frame
             frame = self.draw_zones(frame)
             
             # Tampilkan info tambahan
-            info_color = (0, 0, 255) # Merah
             cv2.putText(frame, f"Kendaraan di Zona Ilegal: {len(self.vehicles_in_zone)}", (10, 30),
-                       cv2.FONT_HERSHEY_SIMPLEX, 0.7, info_color, 2, cv2.LINE_AA)
-            cv2.putText(frame, f"Total Pelanggaran: {self.total_violations}", (10, 60),
-                       cv2.FONT_HERSHEY_SIMPLEX, 0.7, info_color, 2, cv2.LINE_AA)
+                       cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2, cv2.LINE_AA)
             
             # Tulis frame ke video output
             out.write(frame)
@@ -245,3 +231,80 @@ class IllegalParkingDetector:
         out.release()
         cv2.destroyAllWindows()
         print(f"Proses selesai. Video hasil disimpan di: {output_path}")
+
+# ============================================ 
+# PENGGUNAAN UTAMA
+# ============================================ 
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Sistem Deteksi Parkir Ilegal dengan Zoning")
+    parser.add_argument('cctv_name', type=str, 
+                        help="Nama CCTV dari 'cctv_sources.json' (misal: 'btm_kota_bogor')")
+    args = parser.parse_args()
+
+    cctv_sources = load_cctv_sources()
+    
+    if args.cctv_name not in cctv_sources:
+        print(f"Error: Nama CCTV '{args.cctv_name}' tidak ditemukan di cctv_sources.json.")
+        print("Nama CCTV yang tersedia:")
+        for name in cctv_sources.keys():
+            print(f"- {name}")
+        exit()
+    
+    video_path = cctv_sources[args.cctv_name]
+
+    # 1. Inisialisasi detector dengan model kustom Anda
+    detector = IllegalParkingDetector(model_path='runs/detect/train/weights/best.pt')
+    
+    # 2. Muat zona dari file JSON
+    zones_file = f'hasil_zoning/parking_zones_{args.cctv_name}.json' # Dinamis
+    try:
+        with open(zones_file, 'r') as f:
+            data = json.load(f)
+        
+        # Periksa apakah video_path dari JSON sesuai dengan yang diminta
+        if data['video_info']['path'] != video_path:
+            print(f"Peringatan: Zona parkir untuk '{args.cctv_name}' dibuat dengan video berbeda.")
+            print(f"Path video di zona JSON: {data['video_info']['path']}")
+            print(f"Path video yang digunakan: {video_path}")
+            print("Pastikan zona ini relevan untuk video yang dipilih.")
+        
+        zones_from_json = data['zones']
+        
+        for zone in zones_from_json:
+            # Konversi list of lists [x, y] menjadi list of tuples (x, y)
+            zone_as_tuples = [tuple(point) for point in zone]
+            detector.add_zone(zone_as_tuples)
+            
+    except FileNotFoundError:
+        print(f"Error: File zona '{zones_file}' tidak ditemukan. Harap buat zona menggunakan zoning_tools.py terlebih dahulu.")
+        exit()
+    except Exception as e:
+        print(f"Error saat memuat zona: {e}")
+        exit()
+
+    # 3. Siapkan path output yang unik
+    output_dir = 'hasil'
+    os.makedirs(output_dir, exist_ok=True) # Buat direktori jika belum ada
+
+    base_filename = f'deteksi_parkir_ilegal_{args.cctv_name}' # Dinamis
+    counter = 1
+    while True:
+        output_filename = f"{base_filename}_{counter}.mp4"
+        output_path = os.path.join(output_dir, output_filename)
+        if not os.path.exists(output_path):
+            break
+        counter += 1
+
+    print(f"Video output akan disimpan di: {output_path}")
+
+    # 4. Proses video
+    print("\nMemulai proses deteksi parkir ilegal...")
+    print(f"Video sumber: {video_path}")
+    print("Tekan 'q' pada jendela preview untuk menghentikan proses.")
+    
+    detector.process_video(
+        video_path=video_path,
+        output_path=output_path,
+        show_preview=True,
+        violation_threshold=3  # Dianggap pelanggaran setelah 3 detik
+    )

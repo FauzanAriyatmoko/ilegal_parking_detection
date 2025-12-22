@@ -216,6 +216,7 @@ class IllegalParkingDetector:
 
             # Tampilkan preview jika diaktifkan
             if show_preview:
+                cv2.namedWindow("Deteksi Parkir Ilegal", cv2.WINDOW_NORMAL)
                 cv2.imshow("Deteksi Parkir Ilegal", frame)
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     break
@@ -247,7 +248,7 @@ if __name__ == "__main__":
     video_path = cctv_sources[args.cctv_name]
     
     # 1. Inisialisasi detector dengan model yolov8x
-    detector = IllegalParkingDetector(model_path='yolov8x.pt')
+    detector = IllegalParkingDetector(model_path='model/yolov8x.pt')
     
     # 2. Muat zona dari file JSON
     zones_file = f'hasil_zoning/parking_zones_{args.cctv_name}.json' # Dinamis
@@ -270,7 +271,7 @@ if __name__ == "__main__":
             detector.add_zone(zone_as_tuples)
             
     except FileNotFoundError:
-        print(f"Error: File zona '{zones_file}' tidak ditemukan. Harap buat zona menggunakan zoning_tools.py terlebih dahulu.")
+        print(f"Error: File zona '{zones_file}' tidak ditemukan. Harap buat zona menggunakan zoning_tools.py terlebih dahulu!")
         exit()
     except Exception as e:
         print(f"Error saat memuat zona: {e}")
@@ -278,9 +279,9 @@ if __name__ == "__main__":
 
     # 3. Siapkan path output yang unik
     output_dir = 'hasil'
-    os.makedirs(output_dir, exist_ok=True) # Buat direktori jika belum ada
+    os.makedirs(output_dir, exist_ok=True)
 
-    base_filename = f'deteksi_parkir_ilegal_yolo_{args.cctv_name}' # Dinamis
+    base_filename = f'deteksi_parkir_ilegal_yolo_{args.cctv_name}'
     counter = 1
     while True:
         output_filename = f"{base_filename}_{counter}.mp4"

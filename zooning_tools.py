@@ -219,7 +219,7 @@ class ZoneCreator:
         print(f"{'='*60}\n")
         
         # Cetak kode Python untuk langsung digunakan
-        print("KODE PYTHON (Copy-paste ke program Anda):")
+        print("Koordinat Zoning Parkir Ilegal:")
         print("-" * 60)
         for i, zone in enumerate(normalized_zones):
             print(f"zone{i+1} = [")
@@ -252,9 +252,9 @@ class ZoneCreator:
     
     
     def run(self):
-        """Jalankan zone creator"""
-        cv2.namedWindow('Zone Creator - Buat Zona Parkir Ilegal')
-        cv2.setMouseCallback('Zone Creator - Buat Zona Parkir Ilegal', 
+        """Jalankan Tools Zoning"""
+        cv2.namedWindow('Tools Zoning Parkir Ilegal', cv2.WINDOW_NORMAL)
+        cv2.setMouseCallback('Tools Zoning Parkir Ilegal', 
                             self.mouse_callback)
         
         self.draw_frame()

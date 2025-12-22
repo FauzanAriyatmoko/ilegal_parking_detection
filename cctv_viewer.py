@@ -46,7 +46,7 @@ def main():
                 # Display the current CCTV name on the frame
                 font = cv2.FONT_HERSHEY_SIMPLEX
                 text = f"{source_names[current_source_index]}"
-                cv2.putText(frame, text, (10, 30), font, 1, (255, 255, 255), 2, cv2.LINE_AA)
+                cv2.putText(frame, text, (10, 100), font, 1.5, (0, 0, 255), 3, cv2.LINE_AA)
                 cv2.imshow(window_name, frame)
             else:
                 # If the stream fails, show a black screen with an error message
@@ -54,7 +54,7 @@ def main():
                 error_frame.setTo((0, 0, 0))
                 font = cv2.FONT_HERSHEY_SIMPLEX
                 text = f"Gagal memuat stream: {source_names[current_source_index]}"
-                cv2.putText(error_frame, text, (10, 30), font, 1, (0, 0, 255), 2, cv2.LINE_AA)
+                cv2.putText(error_frame, text, (10, 100), font, 1.5, (0, 0, 255), 3, cv2.LINE_AA)
                 cv2.imshow(window_name, error_frame)
         else:
             # Handle case where cap is not initialized at all
@@ -62,7 +62,7 @@ def main():
             error_frame.setTo((0, 0, 0))
             font = cv2.FONT_HERSHEY_SIMPLEX
             text = "Tidak ada stream yang aktif. Tekan 's' untuk mencari."
-            cv2.putText(error_frame, text, (10, 30), font, 1, (0, 0, 255), 2, cv2.LINE_AA)
+            cv2.putText(error_frame, text, (10, 100), font, 1.5, (0, 0, 255), 3, cv2.LINE_AA)
             cv2.imshow(window_name, error_frame)
 
 

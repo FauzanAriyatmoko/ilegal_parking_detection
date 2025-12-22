@@ -50,6 +50,8 @@ class ZoneCreator:
             (255, 255, 0),  # Cyan
         ]
         
+        self.window_name = 'Tools Zoning Parkir Ilegal'
+        
         print("\n" + "="*60)
         print("TOOL PEMBUAT ZONA PARKIR ILEGAL")
         print("="*60)
@@ -143,7 +145,7 @@ class ZoneCreator:
             cv2.putText(self.frame, f"Titik Zona Saat Ini: {len(self.current_zone)}", 
                        (10, info_y + 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
         
-        cv2.imshow('Zone Creator - Buat Zona Parkir Ilegal', self.frame)
+        cv2.imshow(self.window_name, self.frame)
     
     def complete_zone(self):
         """Selesaikan zona yang sedang dibuat"""
@@ -253,8 +255,8 @@ class ZoneCreator:
     
     def run(self):
         """Jalankan Tools Zoning"""
-        cv2.namedWindow('Tools Zoning Parkir Ilegal', cv2.WINDOW_NORMAL)
-        cv2.setMouseCallback('Tools Zoning Parkir Ilegal', 
+        cv2.namedWindow(self.window_name, cv2.WINDOW_NORMAL)
+        cv2.setMouseCallback(self.window_name, 
                             self.mouse_callback)
         
         self.draw_frame()

@@ -28,27 +28,13 @@ class IllegalParkingDetector:
     def __init__(self, model_path):
         """Inisialisasi detector"""
         self.model = YOLO(model_path)
-        
-        # Zona parkir ilegal (koordinat ternormalisasi 0-1)
-        self.illegal_zones = []
-        
-        # Tracking mobil di zona ilegal
-        # {vehicle_id: {'entry_time': float, 'class': str, 'zone_id': int}}
-        self.vehicles_in_zone = {}
-        
-        # Kelas kendaraan yang dipantau dari data.yaml
+        self.illegal_zones = [] # Zona parkir ilegal (koordinat ternormalisasi 0-1)
+        self.vehicles_in_zone = {} # {vehicle_id: {'entry_time': float, 'class': str, 'zone_id': int}} = tracking in illegal zone
         self.vehicle_classes = ['Car'] # bisa saja ['Car', 'Truck', 'Bus', 'Motorcycle'] tergantung kebutuhan
-        # Indeks kelas yang sesuai
         self.vehicle_class_indices = [1] # Sesuaikan dengan indeks label [0, 1, 2, 3, 4] dari model
-        
-        # Counter untuk ID unik kendaraan yang dilacak
-        self.next_vehicle_id = 0
-        
-        # Threshold jarak untuk re-identifikasi kendaraan (dalam koordinat ternormalisasi)
-        self.distance_threshold = 0.08
-        
-        # Kamus untuk menyimpan posisi terakhir kendaraan yang dilacak
-        self.tracked_vehicles = {}
+        self.next_vehicle_id = 0 # Counter untuk ID unik kendaraan yang dilacak
+        self.distance_threshold = 0.08  # Threshold jarak untuk re-identifikasi kendaraan (dalam koordinat ternormalisasi)
+        self.tracked_vehicles = {} # Dictionary posisi terakhir kendaraan yang dilacak
 
     def add_zone(self, points_normalized):
         """

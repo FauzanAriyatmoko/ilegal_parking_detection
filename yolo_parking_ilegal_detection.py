@@ -119,6 +119,9 @@ class IllegalParkingDetector:
 
         frame_count = 0
         
+        if show_preview:
+            cv2.namedWindow("Deteksi Parkir Ilegal", cv2.WINDOW_NORMAL)
+
         while cap.isOpened():
             ret, frame = cap.read()
             if not ret:
@@ -216,7 +219,6 @@ class IllegalParkingDetector:
 
             # Tampilkan preview jika diaktifkan
             if show_preview:
-                cv2.namedWindow("Deteksi Parkir Ilegal", cv2.WINDOW_NORMAL)
                 cv2.imshow("Deteksi Parkir Ilegal", frame)
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     break
@@ -246,9 +248,9 @@ if __name__ == "__main__":
         exit()
     
     video_path = cctv_sources[args.cctv_name]
-    
-    # 1. Inisialisasi detector dengan model yolov8x
-    detector = IllegalParkingDetector(model_path='model/yolov8x.pt')
+
+    # 1. Inisialisasi detector dengan model yolov8s
+    detector = IllegalParkingDetector(model_path='model/yolov8s.pt')
     
     # 2. Muat zona dari file JSON
     zones_file = f'hasil_zoning/parking_zones_{args.cctv_name}.json' # Dinamis

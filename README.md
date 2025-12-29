@@ -130,4 +130,4 @@ Berikut adalah deskripsi dari hasil visual yang akan ditampilkan:
 -   **Screenshot Pelanggaran**: Setiap *screenshot* pelanggaran akan disimpan di `logs/screenshots/nama_cctv/` dengan nama file yang mencakup *timestamp* dan ID kendaraan, misalnya: `20231027_143005_btm_kota_bogor_vid_12.png`.
 
 ![Contoh Hasil Deteksi](contoh_hasil.png)
-*Gambar: Ilustrasi hasil deteksi dengan zona, bounding box, dan heatmap.*
+*Gambar: Ilustrasi hasil deteksi ilegal parking dengan model tracking*

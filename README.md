@@ -23,6 +23,7 @@ Repositori ini berisi seperangkat alat dan skrip Python untuk mendeteksi pelangg
 │         └─── parking_zones_nama_cctv.json
 ├─── hasil/
 │    └─── deteksi_parkir_ilegal_yolo_nama_cctv_1.mp4
+|
 ├─── logs/
 │    ├─── nama_cctv_violations.log
 │    └─── screenshots/
@@ -30,6 +31,12 @@ Repositori ini berisi seperangkat alat dan skrip Python untuk mendeteksi pelangg
 │              └─── TAHUNBULANTANGGAL_JAMMENITDETIK_nama_cctv_vid_IDPELANGGAR.png
 ├─── model/
 │    └─── yolov8s.pt
+|
+├─── NusapalaBerkahCV/
+│    └─── cctv_hikvision_viewer.py
+│    └─── cctv_viewer.py
+│    └─── timestamp_logger.py
+|
 ├─── .gitignore
 ├─── yolo_parking_ilegal_detection.py
 ├─── zooning_tools.py
@@ -120,5 +127,5 @@ Berikut adalah deskripsi dari hasil visual yang akan ditampilkan:
 -   **Heatmap**: Di dalam zona ilegal, akan muncul gradasi warna dari biru ke merah. Area yang sering menjadi titik pelanggaran parkir dalam waktu lama akan berwarna lebih merah dan pekat.
 -   **Screenshot Pelanggaran**: Setiap *screenshot* pelanggaran akan disimpan di `logs/screenshots/nama_cctv/` dengan nama file yang mencakup *timestamp* dan ID kendaraan, misalnya: `20231027_143005_btm_kota_bogor_vid_12.png`.
 
-![Contoh Hasil Deteksi](footage.png)
+![Contoh Hasil Deteksi](contoh_hasil.png)
 *Gambar: Ilustrasi hasil deteksi dengan zona, bounding box, dan heatmap.*

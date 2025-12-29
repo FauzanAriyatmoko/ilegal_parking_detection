@@ -11,6 +11,7 @@ import os
 from ultralytics import YOLO
 from collections import defaultdict
 import argparse # Import argparse
+from NusapalaBerkahCV.timestamp_logger import ViolationLogger # Import logger
 
 # Fungsi untuk memuat sumber CCTV dari file JSON
 def load_cctv_sources(file_path='cctv_sources.json'):
@@ -25,16 +26,20 @@ def load_cctv_sources(file_path='cctv_sources.json'):
         return {}
 
 class IllegalParkingDetector:
-    def __init__(self, model_path):
+    def __init__(self, model_path, logger_instance):
         """Inisialisasi detector"""
         self.model = YOLO(model_path)
         self.illegal_zones = [] # Zona parkir ilegal (koordinat ternormalisasi 0-1)
         self.vehicles_in_zone = {} # {vehicle_id: {'entry_time': float, 'class': str, 'zone_id': int}} = tracking in illegal zone
         self.vehicle_classes = ['Car'] # bisa saja ['Car', 'Truck', 'Bus', 'Motorcycle'] tergantung kebutuhan
-        self.vehicle_class_indices = [1] # Sesuaikan dengan indeks label [0, 1, 2, 3, 4] dari model
+        self.vehicle_class_indices = [2] # Sesuaikan dengan indeks label [0, 1, 2, 3, 4] dari model
         self.next_vehicle_id = 0 # Counter untuk ID unik kendaraan yang dilacak
         self.distance_threshold = 0.08  # Threshold jarak untuk re-identifikasi kendaraan (dalam koordinat ternormalisasi)
         self.tracked_vehicles = {} # Dictionary posisi terakhir kendaraan yang dilacak
+        
+        # Logger untuk pelanggaran
+        self.logger = logger_instance
+        self.logged_violations = set() # Untuk melacak ID kendaraan yang pelanggarannya sudah dicatat
 
     def add_zone(self, points_normalized):
         """
@@ -93,7 +98,7 @@ class IllegalParkingDetector:
         cv2.addWeighted(overlay, 0.3, frame, 0.7, 0, frame)
         return frame
 
-    def process_video(self, video_path, output_path, show_preview=True, violation_threshold=2):
+    def process_video(self, video_path, output_path, cctv_name, show_preview=True, violation_threshold=2):
         """Proses video untuk deteksi parkir ilegal."""
         cap = cv2.VideoCapture(video_path)
         if not cap.isOpened():
@@ -121,8 +126,6 @@ class IllegalParkingDetector:
             
             # Deteksi kendaraan
             results = self.model(frame, classes=self.vehicle_class_indices, conf=0.05)
-            
-            current_frame_detections = []
             
             # Normalisasi resolusi frame untuk konsistensi
             frame_height, frame_width, _ = frame.shape
@@ -174,7 +177,12 @@ class IllegalParkingDetector:
                     # Tentukan warna bounding box
                     is_violation = duration >= violation_threshold
                     color = (0, 0, 255) if is_violation else (0, 165, 255) # Merah jika pelanggaran, Oranye jika peringatan
-                    
+
+                    # Log pelanggaran jika terdeteksi dan belum dicatat
+                    if is_violation and vehicle_id not in self.logged_violations:
+                        self.logger.log_violation(cctv_name, vehicle_id, class_name, duration)
+                        self.logged_violations.add(vehicle_id)
+
                     # Gambar BBox dan label
                     cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), color, 2)
                     label = f"{class_name} | ID: {vehicle_id} | {self.format_duration(duration)}"
@@ -186,6 +194,8 @@ class IllegalParkingDetector:
                     # Kendaraan di luar zona, hapus dari daftar pelanggar jika ada
                     if vehicle_id in self.vehicles_in_zone:
                         del self.vehicles_in_zone[vehicle_id]
+                        if vehicle_id in self.logged_violations:
+                            self.logged_violations.remove(vehicle_id) # Reset status log
                     
                     # Gambar BBox normal
                     cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
@@ -195,6 +205,8 @@ class IllegalParkingDetector:
             for vid in stale_ids:
                 if vid in self.tracked_vehicles: del self.tracked_vehicles[vid]
                 if vid in self.vehicles_in_zone: del self.vehicles_in_zone[vid]
+                if vid in self.logged_violations: self.logged_violations.remove(vid)
+
 
             # Gambar zona pada frame
             frame = self.draw_zones(frame)
@@ -218,9 +230,9 @@ class IllegalParkingDetector:
         cv2.destroyAllWindows()
         print(f"Proses selesai. Video hasil disimpan di: {output_path}")
 
-# ============================================ 
+# ============================================
 # PENGGUNAAN UTAMA
-# ============================================ 
+# ============================================
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Sistem Deteksi Parkir Ilegal dengan Zoning")
     parser.add_argument('cctv_name', type=str, 
@@ -238,8 +250,12 @@ if __name__ == "__main__":
     
     video_path = cctv_sources[args.cctv_name]
 
-    # 1. Inisialisasi detector dengan model kustom Anda
-    detector = IllegalParkingDetector(model_path='runs/detect/train/weights/best.pt')
+    # 1. Inisialisasi logger dan detector
+    violation_logger = ViolationLogger(cctv_source_name=args.cctv_name)
+    detector = IllegalParkingDetector(
+        model_path='runs/detect/train/weights/best.pt',
+        logger_instance=violation_logger
+    )
     
     # 2. Muat zona dari file JSON
     zones_file = f'hasil_zoning/parking_zones_{args.cctv_name}.json' # Dinamis
@@ -291,6 +307,8 @@ if __name__ == "__main__":
     detector.process_video(
         video_path=video_path,
         output_path=output_path,
+        cctv_name=args.cctv_name, # Teruskan nama CCTV ke prosesor
         show_preview=True,
         violation_threshold=3  # Dianggap pelanggaran setelah 3 detik
     )
+

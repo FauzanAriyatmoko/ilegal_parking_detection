@@ -1,18 +1,11 @@
-"""
-Tool Interaktif untuk Membuat Zona Parkir Ilegal
-- Klik pada video untuk membuat titik zona
-- Otomatis normalisasi koordinat
-- Export zona untuk digunakan di detector
-"""
-
 import os
 import cv2
 import numpy as np
 import json
-import argparse # Import argparse
+import argparse
 
 # Fungsi untuk memuat sumber CCTV dari file JSON
-def load_cctv_sources(file_path='cctv_sources.json'):
+def load_cctv_sources(file_path='config/cctv_sources.json'):
     try:
         with open(file_path, 'r') as f:
             return json.load(f)
@@ -23,9 +16,9 @@ def load_cctv_sources(file_path='cctv_sources.json'):
         print(f"Error saat memuat sumber CCTV: {e}")
         return {}
 
-class ZoneCreator:
+class ZoningTools:
     def __init__(self, cctv_name, video_path): # Menerima cctv_name dan video_path
-        """Inisialisasi zone creator"""
+        """Inisialisasi zoning tools"""
         self.cctv_name = cctv_name # Simpan nama CCTV
         self.video_path = video_path
         self.cap = cv2.VideoCapture(video_path)
@@ -38,8 +31,8 @@ class ZoneCreator:
         self.original_frame = self.frame.copy()
         self.height, self.width = self.frame.shape[:2]
         
-        # Data zona
-        self.zones = []  # List of zones (setiap zona adalah list of points)
+        # Data zoning
+        self.zones = []  # List of zona yang sudah selesai dibuat
         self.current_zone = []  # Points untuk zona yang sedang dibuat
         self.zone_colors = [
             (0, 0, 255),    # Merah
@@ -138,19 +131,19 @@ class ZoneCreator:
         
         # Info di layar
         info_y = 30
-        cv2.putText(self.frame, f"Zona Selesai: {len(self.zones)}", 
+        cv2.putText(self.frame, f"Zoning Selesai: {len(self.zones)}", 
                    (10, info_y), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
         
         if self.current_zone:
-            cv2.putText(self.frame, f"Titik Zona Saat Ini: {len(self.current_zone)}", 
+            cv2.putText(self.frame, f"Titik Zoning Saat Ini: {len(self.current_zone)}", 
                        (10, info_y + 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
         
         cv2.imshow(self.window_name, self.frame)
     
     def complete_zone(self):
-        """Selesaikan zona yang sedang dibuat"""
+        """Selesaikan zoning yang sedang dibuat"""
         if len(self.current_zone) < 3:
-            print("ERROR: Minimal 3 titik untuk membuat zona!")
+            print("ERROR: Minimal 3 titik untuk membuat zoning")
             return False
         
         self.zones.append(self.current_zone.copy())
@@ -167,28 +160,28 @@ class ZoneCreator:
         return True
     
     def remove_last_zone(self):
-        """Hapus zona terakhir"""
+        """Hapus zoning terakhir"""
         if self.zones:
             removed = self.zones.pop()
-            print(f"Zona {len(self.zones)+1} dihapus")
+            print(f"Zoning {len(self.zones)+1} dihapus")
             self.draw_frame()
         else:
-            print("Tidak ada zona untuk dihapus")
+            print("Tidak ada zoning untuk dihapus")
     
     def reset_all(self):
-        """Reset semua zona"""
+        """Reset semua zoning"""
         self.zones = []
         self.current_zone = []
-        print("Semua zona direset")
+        print("Semua zoning direset")
         self.draw_frame()
     
     def save_zones(self): # filename akan dibuat secara dinamis
-        """Simpan zona ke file JSON"""
+        """Simpan zoning ke file JSON"""
         if not self.zones:
-            print("Tidak ada zona untuk disimpan!")
+            print("Tidak ada zoning untuk disimpan!")
             return
-        
-        filename = f'hasil_zoning/parking_zones_{self.cctv_name}.json'
+
+        filename = f'config/hasil_zoning/parking_zones_{self.cctv_name}.json'
         
         # Pastikan direktori output ada
         output_dir = os.path.dirname(filename)
@@ -315,8 +308,8 @@ if __name__ == "__main__":
     video_path = cctv_sources[args.cctv_name]
     
     try:
-        # Buat zona creator
-        creator = ZoneCreator(args.cctv_name, video_path)
+        # Buat zoning tools
+        creator = ZoningTools(args.cctv_name, video_path)
         
         # Jalankan tool
         zones = creator.run()

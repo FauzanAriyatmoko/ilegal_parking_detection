@@ -124,7 +124,9 @@ Berikut adalah deskripsi dari hasil visual yang akan ditampilkan:
     -   Nama kelas (misal: `car`).
     -   ID unik dari tracker (misal: `ID: 23`).
     -   Durasi berada di zona ilegal (misal: `00:15`).
--   **Heatmap**: Di dalam zona ilegal, akan muncul gradasi warna dari biru ke merah. Area yang sering menjadi titik pelanggaran parkir dalam waktu lama akan berwarna lebih merah dan pekat.
+-   **Total Pelanggar**: Menghitung total semua pelanggar saat program berjalan
+-   **Total Masuk Zona Area Ilegal**: Menghitung kendaraan yang masuk pada zona ilegal
+-   **Label Informasi**: Setiap kendaraan akan memiliki label yang menampilkan:
 -   **Screenshot Pelanggaran**: Setiap *screenshot* pelanggaran akan disimpan di `logs/screenshots/nama_cctv/` dengan nama file yang mencakup *timestamp* dan ID kendaraan, misalnya: `20231027_143005_btm_kota_bogor_vid_12.png`.
 
 ![Contoh Hasil Deteksi](contoh_hasil.png)

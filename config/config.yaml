@@ -1,0 +1,12 @@
+server:
+  host: "0.0.0.0"
+  port: 8000
+
+mqtt:
+  broker: "mqtt.eclipseprojects.io"
+  port: 1883
+  topic: "parking/illegal"
+
+log:
+  level: "INFO"
+  dir: "log"

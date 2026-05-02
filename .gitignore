@@ -1,12 +1,1 @@
-/.learn
-/UAV-Vehicle-Images-9
-/hasil
-/hasil_zoning
-/model
-/parking_zones.json
-/runs
-/test-sample
-/logs
-/config
-/NusapalaBerkahCV
-/__pycache__
+.parking_ilegal/

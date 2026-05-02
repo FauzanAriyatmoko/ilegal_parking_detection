@@ -1,0 +1,7 @@
+ultralytics
+opencv-python
+numpy
+lapx
+pyyaml
+streamlit
+streamlit-drawable-canvas

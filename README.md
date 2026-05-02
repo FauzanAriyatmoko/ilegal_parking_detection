@@ -1,133 +1,82 @@
-# Sistem Deteksi Parkir Ilegal dengan YOLOv8
+# Sistem Deteksi Parkir Ilegal (Clean Architecture)
 
-Repositori ini berisi seperangkat alat dan skrip Python untuk mendeteksi pelanggaran parkir ilegal secara *real-time* dari rekaman video (misalnya, CCTV). Sistem ini menggunakan model deteksi objek **YOLOv8** untuk mengidentifikasi kendaraan dan menerapkan logika khusus untuk menandai pelanggaran berdasarkan zona terlarang yang telah ditentukan.
+Repositori ini berisi sistem untuk mendeteksi pelanggaran parkir ilegal secara *real-time*. Sistem ini telah di-refactor menggunakan **Layer-First Clean Architecture** untuk mendukung pengembangan jangka panjang dan modularitas yang tinggi.
+
+## Struktur Direktori
+
+```text
+Project Parking/
+├── Dockerfile                    # Docker image definition
+├── requirements.txt              # Python dependencies
+├── config/
+│   ├── config.yaml               # Global: HTTP, MQTT, RTC, RTSP, log settings
+│   └── parking_ilegal/
+│       ├── config.yaml           # Parking-specific: model paths, confidence, interval
+│       └── video.json            # List of RTSP camera URLs and IDs
+├── backend/
+│   ├── runner.py                 # Alternate entry point (main script run)
+│   ├── app/
+│   │   ├── main.py               # Main entry point: spawns HTTP server + AI manager
+│   │   ├── ai_manager.py         # Loads config, starts ParkingDetector per camera
+│   │   ├── http_server.py        # aiohttp HTTP + WebRTC server
+│   │   └── rtsp_manager.py       # RTSP stream management utilities
+│   └── internal/
+│       ├── ai_runtime/
+│       │   ├── background_process/
+│       │   │   ├── periodic_frame.py       # PeriodicFrameCapture daemon thread
+│       │   │   └── log_manager.py          # Log image storage & cleanup manager
+│       │   └── parking_ilegal/
+│       │       ├── parking_detect.py       # Core logic: vehicle detection & tracking in zone
+│       │       └── zoning_tools.py         # Tool for creating zoning coordinates
+│       ├── delivery/
+│       │   ├── http/routes/                # HTTP route handlers
+│       │   ├── mqtt/publisher.py           # MQTT publish client
+│       │   └── rtc/rtc_track.py            # WebRTC video track
+│       └── utils/
+│           ├── geometry.py                 # Angle math helpers / normalization
+│           ├── url_builder.py              # Build public image URL
+│           └── utils.py                    # General image utilities
+├── models/  
+│   └── parking_ilegal/
+│       └── yolov8s.pt                      # YOLOv8 model for vehicle detection
+└── log/                                    # Log and snapshot storage directory
+```
 
 ## Fitur Utama
 
--   **Deteksi Kendaraan**: Menggunakan model `YOLOv8s` yang telah dilatih sebelumnya untuk mendeteksi objek 'mobil'.
--   **Zoning Interaktif**: Dilengkapi dengan `zooning_tools.py` untuk menggambar dan mendefinisikan area parkir ilegal secara visual pada frame video.
--   **Multi-Object Tracking**: Mengimplementasikan **ByteTrack** untuk memberikan ID unik pada setiap kendaraan yang terdeteksi. Ini memungkinkan sistem untuk melacak setiap mobil secara konsisten, bahkan jika mobil tersebut bergerak atau tertutup sementara.
--   **Heatmap Pelanggaran**: Menghasilkan visualisasi *heatmap* secara dinamis di atas zona ilegal. Semakin lama atau sering sebuah area di dalam zona digunakan untuk parkir ilegal, semakin pekat warna heatmap-nya (merah).
--   **Penyimpanan Screenshot Pelanggaran**: Secara otomatis mengambil dan menyimpan *screenshot* (gambar .png) setiap kali pelanggaran parkir baru terdeteksi. *Screenshot* ini disimpan dengan *timestamp* dan ID pelacak untuk kemudahan pemantauan.
--   **Logging Pelanggaran**: Setiap pelanggaran (kendaraan yang berada di zona ilegal melebihi ambang batas waktu) dicatat ke dalam file log di folder `logs/` untuk analisis lebih lanjut.
--   **Konfigurasi Fleksibel**: Sumber video dan konfigurasi lainnya dapat dengan mudah diatur melalui file JSON (`config/cctv_sources.json`).
-
-## Struktur Folder
-
-```
-/learn-yolo
-├─── config/
-│    ├─── bytetrack.yaml
-│    ├─── cctv_sources.json
-│    └─── hasil_zoning/
-│         └─── parking_zones_nama_cctv.json
-├─── hasil/
-│    └─── deteksi_parkir_ilegal_yolo_nama_cctv_1.mp4
-|
-├─── logs/
-│    ├─── nama_cctv_violations.log
-│    └─── screenshots/
-│         └─── nama_cctv/
-│              └─── TAHUNBULANTANGGAL_JAMMENITDETIK_nama_cctv_vid_IDPELANGGAR.png
-├─── model/
-│    └─── yolov8s.pt
-|
-├─── NusapalaBerkahCV/
-│    └─── cctv_hikvision_viewer.py
-│    └─── cctv_viewer.py
-│    └─── timestamp_logger.py
-|
-├─── .gitignore
-├─── yolo_parking_ilegal_detection.py
-├─── zooning_tools.py
-├─── timestamp_logger.py
-└─── README.md
-```
+-   **Layered Architecture**: Pemisahan jelas antara layer *Delivery* (HTTP/MQTT/RTC), *Application* (App logic, AI manager), dan *Internal* (AI runtime, core rules).
+-   **Multi-Camera Support**: Dirancang untuk menangani banyak stream kamera secara paralel via `ai_manager.py` dan konfigurasi `video.json`.
+-   **YOLOv8 & Tracking**: Deteksi objek dengan YOLOv8 dan ByteTrack untuk konsistensi ID.
+-   **Zoning**: Definisi area parkir ilegal berbasis JSON.
 
 ## Instalasi
 
-Pastikan Anda memiliki Python 3.8+ terinstal. Kemudian, instal semua dependensi yang dibutuhkan dengan menjalankan perintah berikut:
+Pastikan Anda menggunakan Python 3.10 atau versi yang direkomendasikan.
 
 ```bash
-pip install ultralytics opencv-python numpy loguru
+pip install -r requirements.txt
 ```
 
-Anda juga perlu mengunduh model `yolov8s.pt` dan meletakkannya di dalam folder `model/`.
+Pastikan meletakkan model YOLOv8 (misal `yolov8s.pt`) ke dalam folder `models/parking_ilegal/`.
 
-## Cara Penggunaan
+## Cara Menjalankan
 
-Sistem ini memerlukan dua langkah utama: (1) mendefinisikan zona parkir ilegal, dan (2) menjalankan deteksi pada video.
+### Konfigurasi
 
-### Langkah 1: Konfigurasi Sumber Video
+1. **Konfigurasi Global**: Atur port server, log level, dan MQTT di `config/config.yaml`.
+2. **Kamera & Stream**: Daftarkan RTSP kamera di `config/parking_ilegal/video.json`.
+3. **Zoning**: Gunakan `backend/internal/ai_runtime/parking_ilegal/zoning_tools.py` untuk menggambar zona per kamera, simpan hasilnya sesuai ID kamera (misal `config/parking_ilegal/zones_cctv_1.json`).
 
-Sebelum memulai, daftarkan terlebih dahulu sumber video Anda di dalam file `config/cctv_sources.json`. Buka file tersebut dan tambahkan entri baru dengan format `nama_unik: "path/to/video.mp4"`.
+### Eksekusi
 
-**Contoh `config/cctv_sources.json`:**
-```json
-{
-  "btm_kota_bogor": "path/ke/video_cctv_1.mp4",
-  "jembatan_otista": "path/ke/video_cctv_2.mp4",
-  "lokasi_baru": "video/lokasi_baru.mp4"
-}
-```
-
-### Langkah 2: Membuat Zona Parkir Ilegal
-
-Gunakan skrip `zooning_tools.py` untuk menggambar poligon zona terlarang pada frame pertama video.
-
-**Jalankan Perintah:**
-Gantilah `nama_cctv` dengan nama unik yang Anda daftarkan di `cctv_sources.json`.
+Anda dapat menjalankan backend dengan menggunakan script `runner.py`:
 
 ```bash
-python zooning_tools.py <nama_cctv>
-```
-**Contoh:**
-```bash
-python zooning_tools.py btm_kota_bogor
+python backend/runner.py
 ```
 
-**Kontrol Interaktif:**
--   **Klik Kiri**: Menambahkan titik untuk poligon zona.
--   **Klik Kanan**: Menghapus titik terakhir yang ditambahkan.
--   **Tekan 'c'**: Menyelesaikan zona saat ini (minimal 3 titik).
--   **Tekan 'z'**: Menghapus zona terakhir yang sudah selesai.
--   **Tekan 's'**: Menyimpan semua zona ke dalam file JSON. File akan disimpan di `config/hasil_zoning/parking_zones_<nama_cctv>.json`.
--   **Tekan 'q'**: Keluar dari alat.
-
-### Langkah 3: Menjalankan Deteksi Parkir Ilegal
-
-Setelah file zona berhasil dibuat, jalankan skrip utama `yolo_parking_ilegal_detection.py` untuk memulai proses deteksi.
-
-**Jalankan Perintah:**
-Sama seperti sebelumnya, gantilah `<nama_cctv>` dengan nama yang sesuai.
-
-```bash
-python yolo_parking_ilegal_detection.py <nama_cctv>
-```
-**Contoh:**
-```bash
-python yolo_parking_ilegal_detection.py btm_kota_bogor
-```
-
-Sistem akan memproses video, dan jendela pratinjau akan muncul menampilkan deteksi secara *real-time*. Video hasil akhir akan disimpan secara otomatis di dalam folder `hasil/`.
-
-## Contoh Hasil Output
-
-Berikut adalah deskripsi dari hasil visual yang akan ditampilkan:
-
--   **Zona Ilegal**: Area parkir terlarang akan ditandai dengan lapisan warna merah transparan.
--   **Bounding Box Kendaraan**:
-    -   **Hijau**: Kendaraan terdeteksi di luar zona ilegal.
-    -   **Oranye**: Kendaraan terdeteksi di dalam zona ilegal, tetapi durasinya belum mencapai ambang batas pelanggaran.
-    -   **Merah**: Kendaraan terdeteksi sebagai pelanggaran (melebihi ambang batas waktu).
--   **Label Informasi**: Setiap kendaraan akan memiliki label yang menampilkan:
-    -   Nama kelas (misal: `car`).
-    -   ID unik dari tracker (misal: `ID: 23`).
-    -   Durasi berada di zona ilegal (misal: `00:15`).
--   **Total Pelanggar**: Menghitung total semua pelanggar saat program berjalan
--   **Total Masuk Zona Area Ilegal**: Menghitung kendaraan yang masuk pada zona ilegal
--   **Label Informasi**: Setiap kendaraan akan memiliki label yang menampilkan:
--   **Screenshot Pelanggaran**: Setiap *screenshot* pelanggaran akan disimpan di `logs/screenshots/nama_cctv/` dengan nama file yang mencakup *timestamp* dan ID kendaraan, misalnya: `20231027_143005_btm_kota_bogor_vid_12.png`.
-
-![Contoh Hasil Deteksi](contoh_hasil.png)
-*Gambar: Ilustrasi hasil deteksi ilegal parking dengan model tracking*
+Sistem akan otomatis:
+- Memuat konfigurasi kamera.
+- Memulai proses deteksi di setiap stream video.
+- Menjalankan HTTP server / WebRTC (jika diaktifkan).
+- Melakukan log dan menyimpan frame pelanggaran secara otomatis.

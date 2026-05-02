@@ -1,0 +1,8 @@
+model:
+  path: "models/parking_ilegal/yolov8s.pt"
+  confidence_threshold: 0.2
+  tracker: "config/bytetrack.yaml"
+
+logic:
+  violation_threshold_seconds: 10
+  classes_to_track: [2] # 2 is 'car' in COCO
